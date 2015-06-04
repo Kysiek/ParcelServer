@@ -74,7 +74,7 @@ userRouter.route('/register')
     });
 
 userRouter.route('/login')
-    .post(passport.authenticate('local', { failureRedirect: '/users/login'}), function(req, res) { res.json("success"); })
+    .post(passport.authenticate('local', { failureRedirect: '/users/login'}), function(req, res) { res.json({success: true, message: "Successfully logged"}); })
     .get(function(req, res){
         res.json({ user: req.user, message: req.user});
     });
@@ -82,6 +82,7 @@ userRouter.route('/login')
 userRouter.route('/logout')
     .get(function(req, res){
         req.logout();
+        res.json({success: true, message: "Successfully logout"})
     });
 
 userRouter.route('/account')
