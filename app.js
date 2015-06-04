@@ -4,14 +4,30 @@ var express = require('express'),
     cookieParser = require('cookie-parser'),
     session = require('express-session'),
     passport = require('passport'),
-    LocalStrategy = require('passport-local').Strategy;
+    LocalStrategy = require('passport-local').Strategy,
+    mysql = require('mysql'),
+    assert = require('assert');
 
 var app = express();
-var membership = new Membership("membership");
+var membership;
+
+connection = mysql.createConnection({host: "localhost", user: "kysiek", password: "passs", database: "BlaBlaPaczka"}, function (err, result) {
+    assert(err == null, "Could not connect to the Database");
+    console.log("Connected successfully to the database");
+});
+connection.connect(function (err) {
+    assert(err == null, "Could not connect to the Database");
+    console.log("Connected successfully to the database");
+    membership = new Membership(connection);
+});
+
 
 var port = process.env.PORT || 3000;
 
-passport.use(new LocalStrategy(
+passport.use(new LocalStrategy({
+        usernameField: 'phoneNumber',
+        passwordField: 'password'
+    },
     function(username, password, done) {
         console.log("Szukanie użytkownika: " + username + " " + password);
         membership.authenticate(username, password, function (err, authResult) {
@@ -52,13 +68,13 @@ userRouter.route('/register')
     .post(function (req, res) {
         console.log("There was a request to register");
         var bodyArgs = req.body;
-        membership.register(bodyArgs.username, bodyArgs.email, bodyArgs.password, bodyArgs.confirm, bodyArgs.phone, function (err, result) {
+        membership.register(bodyArgs.username, bodyArgs.password, bodyArgs.confirm, bodyArgs.phoneNumber, function (err, result) {
             res.json(result);
         });
     });
 
 userRouter.route('/login')
-    .post(passport.authenticate('local', { failureRedirect: '/login'}), function(req, res) { res.json("success"); })
+    .post(passport.authenticate('local', { failureRedirect: '/users/login'}), function(req, res) { res.json("success"); })
     .get(function(req, res){
         res.json({ user: req.user, message: req.user});
     });
