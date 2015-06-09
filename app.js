@@ -6,7 +6,8 @@ var express = require('express'),
     passport = require('passport'),
     LocalStrategy = require('passport-local').Strategy,
     mysql = require('mysql'),
-    assert = require('assert');
+    assert = require('assert'),
+    flash = require('connect-flash');
 
 var app = express();
 var membership;
@@ -60,6 +61,7 @@ app.use(session({
 app.use(cookieParser('double secret probation'));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(flash());
 
 var userRouter = express.Router();
 var parcelRouter = express.Router();
@@ -69,12 +71,24 @@ userRouter.route('/register')
         console.log("There was a request to register");
         var bodyArgs = req.body;
         membership.register(bodyArgs.username, bodyArgs.password, bodyArgs.confirm, bodyArgs.phoneNumber, function (err, result) {
-            res.json(result);
+            var code = result.code || 200;
+            delete result.code;
+            res.status(code).json(result);
         });
     });
 
 userRouter.route('/login')
-    .post(passport.authenticate('local', { failureRedirect: '/users/login'}), function(req, res) { res.json({success: true, message: "Successfully logged"}); })
+    .post(function (req,res,next) {
+
+        passport.authenticate('local', function(err, user, info) {
+            if (err) { return next(err); }
+            if (!user) { return res.json({success: false, message: info.message}); }
+            req.logIn(user, function(err) {
+                if (err) { return next(err); }
+                return res.json({success: true, message: "Successfully logged"});
+            });
+        })(req, res, next);
+    })
     .get(function(req, res){
         res.json({ user: req.user, message: req.user});
     });
@@ -82,7 +96,7 @@ userRouter.route('/login')
 userRouter.route('/logout')
     .get(function(req, res){
         req.logout();
-        res.json({success: true, message: "Successfully logout"})
+        res.status().json({success: true, message: "Successfully logout"})
     });
 
 userRouter.route('/account')
@@ -104,6 +118,7 @@ function ensureAuthenticated(req, res, next) {
     if (req.isAuthenticated()) { return next(); }
     res.status(401).json({message: "You are not logged"});
 }
+
 app.listen(port, function () {
     console.log('Running on PORT: ' + port);
 });
