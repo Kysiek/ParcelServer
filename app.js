@@ -35,7 +35,7 @@ passport.use(new LocalStrategy({
             if(authResult.success) {
                 done(null, authResult.user);
             } else {
-                done(null, false, {message: authResult.message});
+                done(null, false, {message: authResult.message, code: authResult.code});
             }
         });
     }
@@ -82,21 +82,23 @@ userRouter.route('/login')
 
         passport.authenticate('local', function(err, user, info) {
             if (err) { return next(err); }
-            if (!user) { return res.json({success: false, message: info.message}); }
+            if (!user) {
+                var code = info.code || 200;
+                return res.status(code).json({success: false, message: info.message}); }
             req.logIn(user, function(err) {
                 if (err) { return next(err); }
-                return res.json({success: true, message: "Successfully logged"});
+                return res.json({success: true, message: "Successfully logged", user: req.user});
             });
         })(req, res, next);
     })
-    .get(function(req, res){
+    .get(ensureAuthenticated, function(req, res){
         res.json({ user: req.user, message: req.user});
     });
 
 userRouter.route('/logout')
-    .get(function(req, res){
+    .get(ensureAuthenticated, function(req, res){
         req.logout();
-        res.status().json({success: true, message: "Successfully logout"})
+        res.status(200).json({success: true, message: "Successfully logout"})
     });
 
 userRouter.route('/account')
