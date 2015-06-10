@@ -71,9 +71,8 @@ userRouter.route('/register')
         console.log("There was a request to register");
         var bodyArgs = req.body;
         membership.register(bodyArgs.username, bodyArgs.password, bodyArgs.confirm, bodyArgs.phoneNumber, function (err, result) {
-            var code = result.code || 200;
-            delete result.code;
-            res.status(code).json(result);
+            result.code = result.code || 200;
+            res.json(result);
         });
     });
 
@@ -84,10 +83,10 @@ userRouter.route('/login')
             if (err) { return next(err); }
             if (!user) {
                 var code = info.code || 200;
-                return res.status(code).json({success: false, message: info.message}); }
+                return res.json({success: false, message: info.message, code: code}); }
             req.logIn(user, function(err) {
                 if (err) { return next(err); }
-                return res.json({success: true, message: "Successfully logged", user: req.user});
+                return res.json({success: true, message: "Successfully logged", user: req.user, code: 200});
             });
         })(req, res, next);
     })
@@ -98,7 +97,7 @@ userRouter.route('/login')
 userRouter.route('/logout')
     .get(ensureAuthenticated, function(req, res){
         req.logout();
-        res.status(200).json({success: true, message: "Successfully logout"})
+        res.status(200).json({success: true, message: "Successfully logout", code: 200})
     });
 
 userRouter.route('/account')
@@ -118,7 +117,7 @@ app.use('/users', userRouter);
 
 function ensureAuthenticated(req, res, next) {
     if (req.isAuthenticated()) { return next(); }
-    res.status(401).json({message: "You are not logged"});
+    res.status(401).json({message: "You are not logged", code: 10008});
 }
 
 app.listen(port, function () {
